@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Shuttle Live app icon. Drawn by hand for this app, no third-party art; colours and forms
+       come from the board in lib/main.dart. Rebuild the launcher icons with icon/build.sh. -->
+  <rect id="ground" width="1024" height="1024" fill="#121212"/>
+  <!-- FAR and NEAR side strips -->
+  <rect x="202" y="150" width="304" height="88" fill="#D6342C"/>
+  <rect x="518" y="150" width="304" height="88" fill="#1F5FBF"/>
+  <!-- the flip card: ring holes and hinge line -->
+  <rect x="202" y="254" width="620" height="620" rx="28" fill="#F4F2EC"/>
+  <circle cx="472" cy="292" r="13" fill="#3A3D42"/>
+  <circle cx="552" cy="292" r="13" fill="#3A3D42"/>
+  <rect x="202" y="562" width="620" height="5" fill="#121212" fill-opacity="0.25"/>
+  <!-- a shuttlecock, cork first, dropping to the lower left -->
+  <g transform="translate(512 588) rotate(40) translate(0 138)">
+    <path d="M-50 -14 L50 -14 L150 -320 Q0 -372 -150 -320 Z" fill="#121212"/>
+    <path d="M-46 0 H46 V22 A46 46 0 0 1 -46 22 Z" fill="#121212"/>
+    <g stroke="#F4F2EC" stroke-width="7">
+      <line x1="-25" y1="-14" x2="-80" y2="-360"/>
+      <line x1="0" y1="-14" x2="0" y2="-360"/>
+      <line x1="25" y1="-14" x2="80" y2="-360"/>
+    </g>
+    <g stroke="#F4F2EC" stroke-width="16">
+      <line x1="-160" y1="-120" x2="160" y2="-120"/>
+      <line x1="-160" y1="-215" x2="160" y2="-215"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@900&family=Manrope:wght@600;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:390px;height:844px;overflow:hidden;background:#1d6b43;color:#fff;font-family:Manrope,sans-serif}
+.cam{position:relative;height:400px;background:radial-gradient(120% 80% at 50% 30%,#3a4049,#14171c 75%)}
+.cam svg{position:absolute;inset:0}
+.sheet{position:relative;height:444px;background:#1d6b43;background-image:linear-gradient(rgba(255,255,255,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.13) 1px,transparent 1px);background-size:13px 13px;padding:14px 16px}
+.accent{background:#f2d43a;color:#0f2a1c;display:flex;align-items:baseline;gap:10px;padding:10px 12px;font:800 13px Manrope;letter-spacing:.1em}
+.accent b{font:900 44px/1 Doto;letter-spacing:0}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.lab{font:800 12px Manrope;letter-spacing:.16em;border-top:3px solid #fff;padding-top:6px}
+.num{font:900 120px/0.9 Doto;margin-top:4px}
+.row{font:600 13px Manrope;line-height:1.6;margin-top:6px}
+.row b{font-weight:800}
+.foot{position:absolute;left:16px;right:16px;bottom:12px;display:flex;gap:10px;align-items:center;font:600 13px Manrope}
+.btn{border:2px solid #fff;padding:6px 12px}
+</style></head><body>
+<div class="cam">
+  <svg viewBox="0 0 390 400">
+    <polygon points="132,80 258,80 352,380 38,380" fill="#1f6b4a" stroke="#fff" stroke-width="2"/>
+    <line x1="96" y1="196" x2="294" y2="196" stroke="#fff" stroke-width="4"/>
+    <line x1="195" y1="80" x2="195" y2="380" stroke="#fff" stroke-width="2"/>
+    <g fill="#f2d43a"><circle cx="230" cy="130" r="6"/><circle cx="140" cy="314" r="7"/></g>
+  </svg>
+</div>
+<div class="sheet">
+  <div class="accent">NEAR · SMASH <b>138</b> KM/H EST.</div>
+  <div class="cols">
+    <div><div class="lab">FAR SHOTS</div><div class="num">23</div>
+      <div class="row"><b>4</b> smash · <b>6</b> clear · <b>3</b> drop<br><b>5</b> lift · <b>3</b> net · <b>182</b> m run</div></div>
+    <div><div class="lab">NEAR SHOTS</div><div class="num">21</div>
+      <div class="row"><b>2</b> smash · <b>7</b> clear · <b>4</b> drop<br><b>3</b> lift · <b>4</b> net · <b>167</b> m run</div></div>
+  </div>
+  <div class="foot"><span class="btn">Set court</span>Rally 4 · 7 shots · longest 11</div>
+</div>
+</body></html>

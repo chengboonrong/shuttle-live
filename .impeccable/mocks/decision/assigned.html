@@ -1,0 +1,68 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:390px;height:844px;overflow:hidden;background:#13254a;color:#f6f7f2;font-family:Barlow,sans-serif}
+.cam{position:relative;height:452px;background:radial-gradient(120% 80% at 50% 30%,#3a4049,#14171c 75%)}
+.cam svg{position:absolute;inset:0}
+.chip{position:absolute;top:52px;left:16px;background:rgba(19,37,74,.85);padding:6px 10px;border-radius:6px;font:600 13px Barlow;letter-spacing:.04em}
+.plate{height:96px;background:#f6f7f2;color:#13254a;display:flex;align-items:center;gap:14px;padding:0 18px}
+.bands{display:flex;flex-direction:column;gap:5px}
+.bands i{display:block;width:10px;height:18px;border-radius:2px}
+.shot{font:800 64px/0.9 'Barlow Condensed';letter-spacing:.01em}
+.meta{margin-left:auto;text-align:right;font:600 14px Barlow;letter-spacing:.06em}
+.meta b{display:block;font:800 34px/1 'Barlow Condensed';letter-spacing:0}
+.lower{display:flex;height:236px;padding:26px 16px 0 10px;gap:12px}
+.tube{width:34px;border:2px solid #c9a36b;border-radius:17px;display:flex;flex-direction:column-reverse;gap:4px;padding:6px 5px;position:relative}
+.tube i{height:18px;border-radius:9px 9px 4px 4px}
+.tube span{position:absolute;top:-2px;left:50%;transform:translate(-50%,-110%);font:800 20px 'Barlow Condensed'}
+.players{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.p h3{font:600 13px Barlow;letter-spacing:.12em;text-transform:uppercase;color:#c9a36b;border-bottom:2px solid #c9a36b;padding-bottom:6px}
+.n{font:800 76px/0.95 'Barlow Condensed';margin-top:4px}
+.n small{font:600 14px Barlow;letter-spacing:.08em;margin-left:4px}
+.types{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;font:600 14px Barlow}
+.facts{margin-top:6px;font:600 15px Barlow;line-height:1.4}
+.facts b{font:800 22px 'Barlow Condensed'}
+.bar{position:absolute;bottom:0;left:0;right:0;height:52px;display:flex;align-items:center;gap:12px;padding:0 16px;border-top:1px solid rgba(201,163,107,.4)}
+.btn{border:2px solid #f6f7f2;border-radius:8px;padding:7px 14px;font:600 14px Barlow}
+.track{flex:1;height:4px;background:rgba(246,247,242,.3);border-radius:2px;position:relative}
+.track:after{content:"";position:absolute;left:33%;top:-8px;width:20px;height:20px;border-radius:50%;background:#f6f7f2}
+</style></head><body>
+<div class="cam">
+  <svg viewBox="0 0 390 452">
+    <polygon points="132,96 258,96 352,430 38,430" fill="#1f6b4a"/>
+    <g stroke="#fff" stroke-width="2" fill="none">
+      <polygon points="132,96 258,96 352,430 38,430"/>
+      <line x1="96" y1="226" x2="294" y2="226" stroke-width="4"/>
+      <line x1="195" y1="96" x2="195" y2="430"/>
+      <line x1="112" y1="190" x2="278" y2="190"/><line x1="80" y1="282" x2="310" y2="282"/>
+    </g>
+    <line x1="230" y1="150" x2="140" y2="352" stroke="#e2402f" stroke-width="3" stroke-dasharray="2 6"/>
+    <g fill="#f6f7f2"><circle cx="230" cy="150" r="6"/><circle cx="140" cy="352" r="7"/></g>
+    <g stroke="#c9a36b" stroke-width="3"><line x1="230" y1="150" x2="230" y2="118"/><line x1="140" y1="352" x2="140" y2="300"/><line x1="140" y1="300" x2="160" y2="276"/></g>
+  </svg>
+  <div class="chip">28 FPS · TRACKING</div>
+</div>
+<div class="plate">
+  <div class="bands"><i style="background:#2fae5f"></i><i style="background:#2a6fdb"></i><i style="background:#e2402f"></i></div>
+  <div class="shot">SMASH</div>
+  <div class="meta">NEAR · EST.<b>~138 km/h</b></div>
+</div>
+<div style="position:relative;height:296px">
+<div class="lower">
+  <div class="tube"><span>7</span>
+    <i style="background:#f6f7f2"></i><i style="background:#2a6fdb"></i><i style="background:#2fae5f"></i><i style="background:#2a6fdb"></i><i style="background:#c9a36b"></i><i style="background:#2fae5f"></i><i style="background:#e2402f"></i>
+  </div>
+  <div class="players">
+    <div class="p"><h3>Far</h3><div class="n">23<small>SHOTS</small></div>
+      <div class="types"><span style="color:#e2402f">SM 4</span><span style="color:#2a6fdb">CL 6</span><span>DR 3</span><span style="color:#2fae5f">LI 5</span><span style="color:#c9a36b">NE 3</span></div>
+      <div class="facts"><b>182</b> m run<br><b>~148</b> km/h best</div></div>
+    <div class="p"><h3>Near</h3><div class="n">21<small>SHOTS</small></div>
+      <div class="types"><span style="color:#e2402f">SM 2</span><span style="color:#2a6fdb">CL 7</span><span>DR 4</span><span style="color:#2fae5f">LI 3</span><span style="color:#c9a36b">NE 4</span></div>
+      <div class="facts"><b>167</b> m run<br><b>~138</b> km/h best</div></div>
+  </div>
+</div>
+<div class="bar"><span class="btn">Set court</span><span style="font:600 13px Barlow">Rally 4 · longest 11</span><div class="track"></div></div>
+</div>
+</body></html>

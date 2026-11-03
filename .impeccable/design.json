@@ -1,0 +1,360 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-03T00:00:00+08:00",
+  "title": "Design System: Shuttle Live",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "Stand Black",
+        "canonical": "oklch(18.2% 0 0)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "raised": {
+        "role": "neutral",
+        "displayName": "Raised Black",
+        "canonical": "oklch(22.6% 0 0)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "steel": {
+        "role": "neutral",
+        "displayName": "Steel",
+        "canonical": "oklch(65.1% 0.015 258)",
+        "tonalRamp": [
+          "#070b12",
+          "#21252d",
+          "#3d424a",
+          "#5c626a",
+          "#7d838c",
+          "#9fa5af",
+          "#c3cad3",
+          "#e8eff9"
+        ]
+      },
+      "paper": {
+        "role": "primary",
+        "displayName": "Card White",
+        "canonical": "oklch(96.1% 0.008 91)",
+        "tonalRamp": [
+          "#0c0b07",
+          "#262521",
+          "#43423d",
+          "#63615c",
+          "#84827d",
+          "#a7a59f",
+          "#cbc9c3",
+          "#f0eee8"
+        ]
+      },
+      "far": {
+        "role": "secondary",
+        "displayName": "Far Red",
+        "canonical": "oklch(57.7% 0.200 28)",
+        "tonalRamp": [
+          "#3f0000",
+          "#670000",
+          "#8f0000",
+          "#b8040c",
+          "#e14036",
+          "#ff6859",
+          "#ff8e7c",
+          "#ffb4a0"
+        ]
+      },
+      "near": {
+        "role": "secondary",
+        "displayName": "Near Blue",
+        "canonical": "oklch(50.2% 0.164 259)",
+        "tonalRamp": [
+          "#03004e",
+          "#001372",
+          "#003996",
+          "#1c5cbc",
+          "#4080e3",
+          "#62a4ff",
+          "#86c9ff",
+          "#aaf0ff"
+        ]
+      },
+      "caption-grey": {
+        "role": "neutral",
+        "displayName": "Caption Grey",
+        "canonical": "oklch(42.6% 0.015 260)",
+        "tonalRamp": [
+          "#080b11",
+          "#21252c",
+          "#3d424a",
+          "#5c626a",
+          "#7d838b",
+          "#a0a5af",
+          "#c4cad3",
+          "#e9eff9"
+        ]
+      },
+      "ring": {
+        "role": "neutral",
+        "displayName": "Ring Grey",
+        "canonical": "oklch(35.9% 0.010 261)",
+        "tonalRamp": [
+          "#090b0f",
+          "#22252a",
+          "#3f4247",
+          "#5e6167",
+          "#7f8288",
+          "#a2a5ab",
+          "#c6c9cf",
+          "#ebeff5"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "numerals-count": {
+        "displayName": "Count numerals",
+        "purpose": "Shot totals on the count cards; numerals(64)."
+      },
+      "numerals-step": {
+        "displayName": "Step numeral",
+        "purpose": "Corner 1-4 on the setup card; numerals(40)."
+      },
+      "numerals-shot": {
+        "displayName": "Shot name",
+        "purpose": "Newest named shot on the last-shot card; numerals(34)."
+      },
+      "numerals-small": {
+        "displayName": "Small numerals",
+        "purpose": "Rally number and slider value (24, paper); shot speed (22)."
+      },
+      "numerals-tile": {
+        "displayName": "Tile numerals",
+        "purpose": "Shot-type counts (15); corner-dot labels (13)."
+      },
+      "caps-strip": {
+        "displayName": "Strip caps",
+        "purpose": "FAR/NEAR on side colours; caps(19), large text for 3:1."
+      },
+      "caps-button": {
+        "displayName": "Button caps",
+        "purpose": "Every button label; caps(14). Sheet title is caps(15)."
+      },
+      "caps-label": {
+        "displayName": "Label caps",
+        "purpose": "SHOTS, stat labels, RALLY; caps(10.5). Also 12, 11, 10."
+      },
+      "body-lead": {
+        "displayName": "Body lead",
+        "purpose": "Corner instruction, waiting line; body(17, w700)."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Sheet help (14), stat values (13 w700), snackbar (15 w700)."
+      },
+      "body-small": {
+        "displayName": "Body small",
+        "purpose": "Swing readout and other-shot-types line; body(12)."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-hang",
+        "value": "0 2px 4px rgba(0,0,0,0.6)",
+        "purpose": "Only under flip cards; soft, makes them hang off the rings."
+      }
+    ],
+    "motion": [
+      {
+        "name": "flip",
+        "value": "280ms cubic-bezier(0.33, 1, 0.68, 1) rotateX(-90deg -> 0) about the top edge, perspective 0.002",
+        "purpose": "Flip Card value change (Curves.easeOutCubic); the old card stays still underneath."
+      },
+      {
+        "name": "flip-reduced",
+        "value": "0ms",
+        "purpose": "When MediaQuery.disableAnimations is set (iOS Reduce Motion, Android remove animations)."
+      }
+    ],
+    "breakpoints": [],
+    "layout": {
+      "cameraMaxAspect": "3:4 (height <= width / 0.75)",
+      "textScaleMax": 1.3,
+      "orientation": "portrait only",
+      "fullFrameWhileCalibratingFrom": "812dp tall"
+    },
+    "rasters": [
+      {
+        "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/*.png",
+        "what": "App icon, all sizes",
+        "provenance": "Own mark, hand-drawn in icon/icon.svg (no third-party art); rendered by icon/build.sh with headless Chrome, resized with Pillow, alpha removed. Replaced the Flutter template logo on 2026-11-03."
+      },
+      {
+        "path": "android/app/src/main/res/mipmap-*/ic_launcher.png",
+        "what": "Legacy launcher icon, five densities (Android 7 and older)",
+        "provenance": "Own mark from icon/icon.svg, rendered by icon/build.sh. Replaced the Flutter template logo on 2026-11-03."
+      },
+      {
+        "path": "android/app/src/main/res/mipmap-*/ic_launcher_foreground.png",
+        "what": "Adaptive icon foreground, five densities, used by mipmap-anydpi-v26/ic_launcher.xml over a #121212 background",
+        "provenance": "The icon/icon.svg art without its ground, shrunk into the 66 dp safe circle of the 108 dp canvas by icon/build.sh."
+      },
+      {
+        "path": "ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage*.png",
+        "what": "1x1 fully transparent placeholder used by LaunchScreen.storyboard",
+        "provenance": "Flutter SDK template default, byte-identical to the Flutter 3.38.3 template; invisible over #121212."
+      }
+    ],
+    "fonts": [
+      {
+        "family": "Archivo",
+        "files": [
+          "fonts/Archivo-Black.ttf"
+        ],
+        "licence": "SIL OFL 1.1 (fonts/OFL.txt)"
+      },
+      {
+        "family": "Archivo Narrow",
+        "files": [
+          "fonts/ArchivoNarrow-Medium.ttf",
+          "fonts/ArchivoNarrow-Bold.ttf"
+        ],
+        "licence": "SIL OFL 1.1 (fonts/OFL.txt)"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Count Card",
+      "kind": "card",
+      "refersTo": "count-card",
+      "description": "Flip card with hinge holding one player's shot total, captioned SHOTS; flips over its top rings on each hit.",
+      "html": "<div class=\"ds-side\"><div class=\"ds-strip ds-far\">FAR</div><div class=\"ds-count\"><span class=\"ds-rings\"><i></i><i></i></span><span class=\"ds-hinge\"></span><b>18</b><small>SHOTS</small></div></div>",
+      "css": ".ds-rings{position:absolute;top:5px;left:50%;transform:translateX(-50%);display:flex;gap:16px}.ds-rings i{width:6px;height:6px;border-radius:50%;background:#3A3D42;display:block}@keyframes ds-flip{from{transform:perspective(500px) rotateX(-90deg)}to{transform:perspective(500px) rotateX(0)}}.ds-side{width:170px;background:#121212;padding:8px}.ds-strip{height:28px;display:flex;align-items:center;justify-content:center;color:#F4F2EC;font-size:19px;font-family:'Archivo Narrow',sans-serif;font-weight:700;letter-spacing:0.1em;line-height:1.15;text-transform:uppercase;}.ds-far{background:#D6342C}.ds-count{position:relative;margin-top:4px;height:92px;background:#F4F2EC;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 6px 5px;transform-origin:top center;animation:ds-flip 280ms cubic-bezier(.33,1,.68,1)}.ds-count:hover{animation:none}.ds-hinge{position:absolute;left:0;right:0;top:50%;height:1.5px;background:rgba(18,18,18,.25)}.ds-count b{position:relative;font-family:'Archivo Black','Archivo',sans-serif;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;font-size:64px;color:#121212}.ds-count small{font-family:'Archivo Narrow',sans-serif;font-weight:700;letter-spacing:0.1em;line-height:1.15;text-transform:uppercase;font-size:10.5px;color:#4A4F57;margin-top:2px}@media (prefers-reduced-motion:reduce){.ds-count{animation:none}}"
+    },
+    {
+      "name": "Last-Shot Card",
+      "kind": "card",
+      "refersTo": "last-shot-card",
+      "description": "Wide flip card with the newest named shot, its side tag and the estimated speed.",
+      "html": "<div class=\"ds-last\"><span class=\"ds-rings\"><i></i><i></i></span><span class=\"ds-tag\">NEAR</span><b class=\"ds-name\">SMASH</b><span class=\"ds-speed\"><b>~138 km/h</b><small>ESTIMATE</small></span></div>",
+      "css": ".ds-rings{position:absolute;top:5px;left:50%;transform:translateX(-50%);display:flex;gap:16px}.ds-rings i{width:6px;height:6px;border-radius:50%;background:#3A3D42;display:block}@keyframes ds-flip{from{transform:perspective(500px) rotateX(-90deg)}to{transform:perspective(500px) rotateX(0)}}.ds-last{position:relative;width:360px;height:60px;box-sizing:border-box;background:#F4F2EC;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,.6);display:flex;align-items:center;gap:12px;padding:8px 14px 4px 10px;transform-origin:top center;animation:ds-flip 280ms cubic-bezier(.33,1,.68,1)}.ds-tag{background:#1F5FBF;color:#F4F2EC;padding:2px 8px;font-size:19px;font-family:'Archivo Narrow',sans-serif;font-weight:700;letter-spacing:0.1em;line-height:1.15;text-transform:uppercase;}.ds-name{flex:1;font-family:'Archivo Black','Archivo',sans-serif;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;font-size:34px;color:#121212}.ds-speed{display:flex;flex-direction:column;align-items:flex-end}.ds-speed b{font-family:'Archivo Black','Archivo',sans-serif;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;font-size:22px;color:#121212}.ds-speed small{font-family:'Archivo Narrow',sans-serif;font-weight:700;letter-spacing:0.1em;line-height:1.15;text-transform:uppercase;font-size:10px;color:#4A4F57}@media (prefers-reduced-motion:reduce){.ds-last{animation:none}}"
+    },
+    {
+      "name": "Corner Step Card",
+      "kind": "custom",
+      "refersTo": "last-shot-card",
+      "description": "The same wide flip card during setup: step numeral, instruction, progress and UNDO.",
+      "html": "<div class=\"ds-step\"><span class=\"ds-rings\"><i></i><i></i></span><b>2</b><span class=\"ds-txt\"><strong>Tap the far-right corner</strong><em>Outer doubles lines · 2 of 4</em></span><button class=\"ds-undo\">UNDO</button></div>",
+      "css": ".ds-rings{position:absolute;top:5px;left:50%;transform:translateX(-50%);display:flex;gap:16px}.ds-rings i{width:6px;height:6px;border-radius:50%;background:#3A3D42;display:block}.ds-step{position:relative;width:360px;height:60px;background:#F4F2EC;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,.6);display:flex;align-items:center}.ds-step>b{width:52px;text-align:center;font-family:'Archivo Black','Archivo',sans-serif;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;font-size:40px;color:#121212}.ds-txt{flex:1;display:flex;flex-direction:column}.ds-txt strong{font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:17px;line-height:1.25;color:#121212}.ds-txt em{font-family:'Archivo Narrow',sans-serif;font-style:normal;font-weight:500;font-size:13px;line-height:1.25;color:#4A4F57}.ds-undo{min-width:48px;min-height:48px;background:none;border:0;color:#121212;font-size:14px;font-family:'Archivo Narrow',sans-serif;font-weight:700;letter-spacing:0.1em;line-height:1.15;text-transform:uppercase;}.ds-undo:hover{background:rgba(18,18,18,.08)}.ds-undo:focus-visible{outline:2px solid #121212}"
+    },
+    {
+      "name": "Type Tile",
+      "kind": "card",
+      "refersTo": "type-tile",
+      "description": "Small paper tile with one shot type's count.",
+      "html": "<div class=\"ds-tile\"><b>3</b><span>DROP</span></div>",
+      "css": ".ds-tile{width:52px;background:#F4F2EC;border-radius:3px;padding:3px 2px;display:flex;flex-direction:column;align-items:center;gap:2px}.ds-tile b{font-family:'Archivo Black','Archivo',sans-serif;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;font-size:15px;color:#121212}.ds-tile span{font-family:'Archivo Narrow',sans-serif;font-weight:700;letter-spacing:0.1em;line-height:1.15;text-transform:uppercase;font-size:11px;color:#121212}"
+    },
+    {
+      "name": "Outlined Button",
+      "kind": "button",
+      "refersTo": "button-outlined",
+      "description": "Steel-outlined caps button; over the camera it takes an 85% ink fill.",
+      "html": "<button class=\"ds-btn-outlined\">SET COURT AGAIN</button>",
+      "css": ".ds-btn-outlined{min-height:48px;min-width:48px;padding:0 24px;background:rgba(18,18,18,.85);color:#F4F2EC;border:2px solid #8A9099;border-radius:6px;font-size:14px;font-family:'Archivo Narrow',sans-serif;font-weight:700;letter-spacing:0.1em;line-height:1.15;text-transform:uppercase;}.ds-btn-outlined:hover{background:rgba(244,242,236,.08)}.ds-btn-outlined:focus-visible{outline:2px solid #F4F2EC;outline-offset:2px}"
+    },
+    {
+      "name": "Text Button",
+      "kind": "button",
+      "refersTo": "button-text",
+      "description": "Borderless caps button for secondary actions such as RESET STATS.",
+      "html": "<button class=\"ds-btn-text\">RESET STATS</button>",
+      "css": ".ds-btn-text{min-height:48px;min-width:48px;padding:0 12px;background:none;border:0;border-radius:20px;color:#F4F2EC;font-size:14px;font-family:'Archivo Narrow',sans-serif;font-weight:700;letter-spacing:0.1em;line-height:1.15;text-transform:uppercase;}.ds-btn-text:hover{background:rgba(244,242,236,.08)}.ds-btn-text:focus-visible{outline:2px solid #F4F2EC}"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "description": "FPS and swing readout over the camera after setup.",
+      "html": "<div class=\"ds-chip\"><b>13 FPS</b><span>Swing 0 far · 0 near</span></div>",
+      "css": ".ds-chip{display:inline-flex;flex-direction:column;padding:6px 10px;background:rgba(18,18,18,.85);border:1px solid #8A9099;border-radius:6px}.ds-chip b{font-size:12px;color:#F4F2EC;font-family:'Archivo Narrow',sans-serif;font-weight:700;letter-spacing:0.1em;line-height:1.15;text-transform:uppercase;}.ds-chip span{font-family:'Archivo Narrow',sans-serif;font-weight:500;font-size:12px;line-height:1.25;color:#8A9099}"
+    },
+    {
+      "name": "Stat Row",
+      "kind": "custom",
+      "refersTo": "board-frame",
+      "description": "Steel label and paper value; every estimate starts with ~.",
+      "html": "<div class=\"ds-stat\"><span>HARDEST</span><b>~139 km/h</b></div>",
+      "css": ".ds-stat{width:170px;display:flex;justify-content:space-between;background:#121212;padding:3px 8px}.ds-stat span{font-size:10.5px;color:#8A9099;font-family:'Archivo Narrow',sans-serif;font-weight:700;letter-spacing:0.1em;line-height:1.15;text-transform:uppercase;}.ds-stat b{font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:13px;line-height:1.25;color:#F4F2EC}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Umpire's Flip Scoreboard",
+    "overview": "**Creative North Star: \"The Umpire's Flip Scoreboard\"**\n\nThe one screen is a scoreboard on an umpire's stand, set under a live camera. A matte black stand carries a steel frame; card-white flip cards hang from two top rings and carry heavy black numerals; the far player is red and the near player blue, used as header strips, on-court rings, mini-court dots and trails. When a number changes, its new card falls over the top rings onto the old one. That flip is the system's one signature move.\n\nThe mode is Operate. The player reads it from the near half of the court with a glance, and walks up between games for detail, so type is either very big (numerals) or a dense, tracked caption. Everything that needs a touch happens before the first serve: corner setup on the board, and the rare controls behind one button in a Material bottom sheet. The layout is fixed, not responsive; one look on iPhone and Pixel, portrait only.\n\nThe build is flat apart from one soft shadow under each flip card. It refuses the fitness-app grid of small dark stat tiles with a neon accent: no neon, no glass blur, no gradients.\n\nShipping rasters and fonts: the launcher icons are the app's own mark, drawn by hand in icon/icon.svg. It is a card-white flip card with ring holes and a hinge line, an ink shuttlecock on the card, and the red and blue side strips above it, all on Stand Black. icon/build.sh renders it to every iOS and Android size; Android 8+ gets an adaptive icon with a Stand Black background and the same art as the foreground. The iOS launch image is still the template's 1x1 transparent placeholder over a Stand Black launch screen. The bundled faces are Archivo Black and Archivo Narrow under the SIL OFL (fonts/OFL.txt).",
+    "keyCharacteristics": [
+      "Black stand, steel frame, card-white cards, black numerals.",
+      "Red is far, blue is near, everywhere a side is shown.",
+      "Cards flip over their top rings when their value changes.",
+      "Every estimated number starts with \"~\"; nothing reads as a match score.",
+      "Text scale is clamped at 1.3x because the board is a fixed panel."
+    ],
+    "rules": [
+      {
+        "name": "The Two Sides Rule",
+        "body": "Red always means far and blue always means near. Neither is ever an accent, a status colour for something else, or a decoration; the one exception in the build is the error banner, which reuses red as Material `error`.",
+        "section": "colors"
+      },
+      {
+        "name": "The Paper Carries Ink Rule",
+        "body": "Text on paper is ink, or caption grey for captions. Text on the stand is paper, or steel for secondary labels. No other text colours.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Voices Rule",
+        "body": "Numbers are Archivo Black; words are Archivo Narrow. A word set in Archivo Black is allowed only as the shot name on the last-shot card.",
+        "section": "typography"
+      },
+      {
+        "name": "The 1.3x Clamp Rule",
+        "body": "The app wraps every route in `MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3)`. The board is a fixed panel; past 1.3x its labels no longer fit. Fixed-size type inside cards uses FittedBox scale-down, not wrapping.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Shadow Rule",
+        "body": "Only flip cards cast a shadow, and it is soft. No hard offset shadows, no glows, no blur behind panels.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** put every changing number on a Flip Card, and key it by the value so it flips only when the value changes.",
+      "**Do** honour `MediaQuery.disableAnimationsOf`: the flip drops to 0 ms.",
+      "**Do** start every estimated figure with \"~\" (run distance, sprint, hardest hit, shot speed), caption the headline shot speed ESTIMATE, and keep the \"~ = ESTIMATE\" key in the board's middle column, level with the stat lines.",
+      "**Do** caption player totals SHOTS so the two big numbers never read as a match score.",
+      "**Do** keep the camera no taller than its 3:4 frame, and keep anything off the camera while the court is being set.",
+      "**Do** keep touch targets at 48 x 48 or larger and keep controls in the bottom sheet, never on the board.",
+      "**Do** use the `numerals`, `caps` and `body` helpers and the six colour constants plus the two greys (caption grey, ring grey); launch screens stay Stand Black."
+    ],
+    "donts": [
+      "**Don't** use red or blue for anything but far and near.",
+      "**Don't** add neon accents, glass blur, gradients, glows or hard offset shadows.",
+      "**Don't** put the hinge line on a card that carries words.",
+      "**Don't** let any number or label read as a score, a line call or a precise measurement.",
+      "**Don't** raise the text-scale clamp above 1.3x without reworking the board."
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:390px;height:844px;overflow:hidden;background:#0b0d10;color:#e6e8eb;font-family:-apple-system,system-ui,sans-serif}
+.cam{position:relative;height:430px;background:radial-gradient(120% 80% at 50% 30%,#3a4049,#14171c 75%)}
+.cam svg{position:absolute;inset:0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px}
+.tile{background:#1a1e24;border-radius:14px;padding:12px}
+.tile small{display:block;font-size:12px;color:#8b929b}
+.tile b{font-size:30px;font-weight:700}
+.tile em{font-style:normal;color:#c6ff3d;font-size:13px}
+.wide{grid-column:span 2;display:flex;justify-content:space-between;align-items:center}
+.btn{background:#c6ff3d;color:#0b0d10;border-radius:20px;padding:8px 16px;font-weight:700;font-size:14px}
+</style></head><body>
+<div class="cam">
+  <svg viewBox="0 0 390 430">
+    <polygon points="132,86 258,86 352,410 38,410" fill="#1f6b4a" stroke="#fff" stroke-width="2"/>
+    <line x1="96" y1="206" x2="294" y2="206" stroke="#fff" stroke-width="4"/>
+    <g fill="#c6ff3d"><circle cx="230" cy="136" r="6"/><circle cx="140" cy="330" r="7"/></g>
+  </svg>
+</div>
+<div class="grid">
+  <div class="tile wide"><div><small>Last shot</small><b>Smash</b> <em>~138 km/h</em></div><span class="btn">Set court</span></div>
+  <div class="tile"><small>Far · shots</small><b>23</b><br><em>182 m run</em></div>
+  <div class="tile"><small>Near · shots</small><b>21</b><br><em>167 m run</em></div>
+  <div class="tile"><small>Rally</small><b>4</b><br><em>7 shots</em></div>
+  <div class="tile"><small>Fastest</small><b>148</b><br><em>km/h · far</em></div>
+  <div class="tile"><small>Far smashes</small><b>4</b></div>
+  <div class="tile"><small>Near smashes</small><b>2</b></div>
+</div>
+</body></html>

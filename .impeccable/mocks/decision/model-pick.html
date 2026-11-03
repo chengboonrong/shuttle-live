@@ -1,0 +1,38 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&family=Archivo:wght@800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:390px;height:844px;overflow:hidden;background:#121212;color:#f4f2ec;font-family:'Archivo Narrow',sans-serif}
+.cam{position:relative;height:420px;background:radial-gradient(120% 80% at 50% 30%,#3a4049,#14171c 75%)}
+.cam svg{position:absolute;inset:0}
+.frame{margin:12px;border:3px solid #8a9099;border-radius:6px;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.side h3{font:700 14px 'Archivo Narrow';letter-spacing:.14em;text-align:center;padding:4px 0;color:#fff}
+.card{position:relative;background:#f4f2ec;color:#121212;border-radius:4px;height:150px;display:flex;align-items:center;justify-content:center;font:900 112px/1 Archivo;margin-top:6px}
+.card:before{content:"";position:absolute;left:0;right:0;top:50%;border-top:2px solid #121212;opacity:.25}
+.card:after{content:"";position:absolute;top:8px;left:50%;width:40px;height:8px;transform:translateX(-50%);background:radial-gradient(circle,#8a9099 3px,transparent 4px) 0 0/20px 8px}
+.mini{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:8px}
+.mini span{background:#f4f2ec;color:#121212;border-radius:3px;text-align:center;font:700 13px 'Archivo Narrow';padding:3px 0}
+.mini b{font:800 16px Archivo;display:block}
+.last{margin:0 12px;background:#f4f2ec;color:#121212;border-radius:4px;display:flex;align-items:center;gap:12px;padding:8px 14px;font:700 15px 'Archivo Narrow';letter-spacing:.08em}
+.last b{font:900 34px/1 Archivo;letter-spacing:0}
+.bar{display:flex;gap:10px;align-items:center;padding:10px 12px;font:700 14px 'Archivo Narrow'}
+.btn{border:2px solid #8a9099;border-radius:6px;padding:6px 12px}
+</style></head><body>
+<div class="cam">
+  <svg viewBox="0 0 390 420">
+    <polygon points="132,90 258,90 352,400 38,400" fill="#1f6b4a" stroke="#fff" stroke-width="2"/>
+    <line x1="96" y1="210" x2="294" y2="210" stroke="#fff" stroke-width="4"/>
+    <line x1="195" y1="90" x2="195" y2="400" stroke="#fff" stroke-width="2"/>
+    <g fill="#fff"><circle cx="230" cy="140" r="6"/><circle cx="140" cy="330" r="7"/></g>
+  </svg>
+</div>
+<div class="frame">
+  <div class="side"><h3 style="background:#d6342c">FAR</h3><div class="card">23</div>
+    <div class="mini"><span><b>4</b>SMASH</span><span><b>6</b>CLEAR</span><span><b>3</b>DROP</span><span><b>5</b>LIFT</span><span><b>3</b>NET</span><span><b>182</b>M RUN</span></div></div>
+  <div class="side"><h3 style="background:#1f5fbf">NEAR</h3><div class="card">21</div>
+    <div class="mini"><span><b>2</b>SMASH</span><span><b>7</b>CLEAR</span><span><b>4</b>DROP</span><span><b>3</b>LIFT</span><span><b>4</b>NET</span><span><b>167</b>M RUN</span></div></div>
+</div>
+<div class="last">NEAR <b>SMASH</b> ~138 KM/H</div>
+<div class="bar"><span class="btn">Set court</span>RALLY 4 · 7 SHOTS · LONGEST 11</div>
+</body></html>
