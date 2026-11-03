@@ -21,7 +21,7 @@ Success: the owner picks a clip on the iPhone, taps the court once, and watches 
 - No playback speed control and no real-time-speed mode.
 - No export or saving of results.
 - No automatic court detection; the owner taps four corners as with the camera.
-- No audio.
+- No audio playback. (Update 2026-11-03, owner's choice: hits on a clip are timed by its racket sounds; the sound is read, never played.)
 - No release. No APK upload or Drive upload unless the owner asks.
 
 ## Anti-goals (would make it a failure even if it works)

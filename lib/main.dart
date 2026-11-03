@@ -186,6 +186,13 @@ class Player {
     if (trail.length > 240) trail.removeAt(0);
   }
 
+  /// Where they stood nearest to [t] in the last half second; null when nothing is in it.
+  Offset? posAt(DateTime t) => _recent.isEmpty
+      ? null
+      : _recent
+            .reduce((a, b) => a.$1.difference(t).abs() <= b.$1.difference(t).abs() ? a : b)
+            .$2;
+
   /// After a TV cut: forget where they were, keep what they did.
   void loseTrack() {
     pos = _anchor = null;
@@ -199,6 +206,32 @@ class Player {
   void reset() {
     loseTrack();
     distance = topSpeed = 0;
+  }
+}
+
+/// A clip's racket sounds, each turned into a hit once the swings around it have been seen.
+class SoundHits {
+  SoundHits(List<Duration> sounds, DateTime base) : _times = [for (final s in sounds) base.add(s)];
+  final List<DateTime> _times;
+  int _next = 0; // the first sound not yet heard
+
+  /// Hears every sound at least [soundWindow] before [now]; returns the sides of the hits it added.
+  List<Side> hear(DateTime now, Player far, Player near, Match match, double threshold) {
+    final sides = <Side>[];
+    for (; _next < _times.length && !now.isBefore(_times[_next].add(soundWindow)); _next++) {
+      final t = _times[_next];
+      final f = far.swing.peakNear(t), n = near.swing.peakNear(t);
+      final prev = match.hits.lastOrNull;
+      final last = prev != null && t.difference(prev.time) <= Match.rallyGap ? prev.side : null;
+      final side = soundHitter(f.swing, n.swing, last, threshold);
+      if (side == null) continue; // nobody swung: a setup, a TV cut or another court's sound
+      final (p, peak) = side == Side.far ? (far, f) : (near, n);
+      final pos = p.posAt(t) ?? p.pos;
+      if (pos != null && match.addHit(side, t, pos, peak.contact, peak.swing) != null) {
+        sides.add(side);
+      }
+    }
+    return sides;
   }
 }
 
@@ -230,6 +263,7 @@ class _LivePageState extends State<LivePage> {
 
   // Video mode: a saved clip in place of the camera.
   VideoClip? clip; // null: the live camera
+  SoundHits? _sounds; // a clip with sound: its hits are timed by the racket, not the wrist
   bool playing = false;
   ui.Image? frame; // the clip frame on screen
   Duration frameTime = Duration.zero;
@@ -240,6 +274,7 @@ class _LivePageState extends State<LivePage> {
   double playRate = 0; // video seconds per wall second, smoothed
   DateTime? _shownAt; // wall time of the last frame shown while playing
   YOLO? _yolo;
+  late final AppLifecycleListener _lifecycle;
   int _run = 0; // bumped to end the play loop: a pause, ✕ or another clip
   int? _opening; // the _run of an open still waiting for its first frame
   ({List<Offset> taps, Homography? toCourt, Homography? toFrame, bool calibrating})? _cameraCourt;
@@ -249,11 +284,16 @@ class _LivePageState extends State<LivePage> {
   @override
   void initState() {
     super.initState();
+    // A backgrounded app loses the decoder, and a clip can't seek back: stop on the way out.
+    _lifecycle = AppLifecycleListener(onInactive: () {
+      if (playing) togglePlay();
+    });
     if (demo) seedDemo();
   }
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     closeVideo();
     camera.dispose();
     super.dispose();
@@ -295,7 +335,10 @@ class _LivePageState extends State<LivePage> {
           toCourt = Homography.fit(taps, courtCorners);
           toFrame = Homography.fit(courtCorners, taps);
           calibrating = false;
-          if (clip != null) _cut = CutDetector(_thumb!);
+          if (clip != null) {
+            _cut = CutDetector(_thumb!);
+            playRate = 0; // the setup play only decoded, so its rate says nothing
+          }
         } on ArgumentError {
           taps.clear();
           badCorners = true;
@@ -329,7 +372,18 @@ class _LivePageState extends State<LivePage> {
 
   /// Opens a clip from the photo library; a cancel does nothing.
   Future<void> pickVideo() async {
-    final file = await ImagePicker().pickVideo(source: ImageSource.gallery);
+    XFile? file;
+    try {
+      file = await ImagePicker().pickVideo(source: ImageSource.gallery);
+    } on PlatformException catch (e) {
+      // A second tap while the picker is up: the first pick is still on its way.
+      if (mounted && e.code != 'already_active') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("That video can't be read")),
+        );
+      }
+      return;
+    }
     if (file != null) await openVideo(file.path);
   }
 
@@ -347,6 +401,7 @@ class _LivePageState extends State<LivePage> {
     }
     if (run != _run || !mounted) return;
     if (opened != null) {
+      final sounds = opened.sounds;
       setState(() {
         if (clip == null) {
           _cameraCourt = (
@@ -357,8 +412,10 @@ class _LivePageState extends State<LivePage> {
           );
         }
         clip = opened;
+        _sounds = sounds == null ? null : SoundHits(sounds, _videoBase);
         playing = false;
         _shownAt = null;
+        playRate = 0;
         frame?.dispose();
         frame = null;
         _cut = null;
@@ -366,18 +423,19 @@ class _LivePageState extends State<LivePage> {
         error = null; // the camera's; the clip loads the model itself
         _clearCourt();
       });
+      ScaffoldMessenger.of(context).hideCurrentSnackBar(); // its UNDO would mix timelines
       _yolo ??= YOLO(modelPath: 'yolo26n-pose', task: YOLOTask.pose);
       await _step(run);
       if (run != _run || !mounted) return;
-      _opening = null;
-      if (frame != null) return;
     }
     _opening = null;
-    // Not a video, or not one frame in it.
+    if (opened != null && frame != null) return;
+    // Not a video, or not one frame in it. Close first: closing hides the current SnackBar.
+    if (clip != null) await closeVideo();
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("That video can't be read")),
     );
-    if (clip != null) await closeVideo();
   }
 
   /// Plays or pauses the clip. A pause stops decoding, so video time stands still.
@@ -385,7 +443,10 @@ class _LivePageState extends State<LivePage> {
     if (_opening == _run) return; // the reader may already be on the next clip
     final run = ++_run; // a pause ends the loop; a frame still being read is dropped
     _shownAt = null; // the rate restarts, so a pause never counts as slow playback
-    setState(() => playing = !playing);
+    setState(() {
+      playing = !playing;
+      if (playing) error = null; // a stale model error from before a pause
+    });
     if (playing) _play(run);
   }
 
@@ -401,15 +462,25 @@ class _LivePageState extends State<LivePage> {
     final f = await VideoFrames.next().catchError((_) => null);
     if (run != _run) return false;
     if (f == null) {
-      setState(() => playing = false);
+      setState(() {
+        playing = false;
+        if (!calibrating) {
+          // No later frame comes to settle the last sounds: hear them on the swings seen so far.
+          _sounds?.hear(_videoBase.add(frameTime + soundWindow), far, near, match, threshold);
+          // Live names the last shot 3 s later; the clip's end must too.
+          match.tick(_videoBase.add(frameTime + Match.rallyGap * 2));
+        }
+      });
       return false;
     }
     final image = await decodeImageFromList(f.jpeg);
     // Once the court is set, a frame that isn't the court (a TV cut) shows but isn't counted.
     final counting = run == _run && _cut != null && !calibrating;
     final off = counting && _cut!.update(f.thumb);
+    // The detector needs 2 frames to call a cut; the first one is already not the court.
+    final cutFrame = counting && thumbDiff(f.thumb, _cut!.reference) > cutThreshold;
     List<YOLOResult>? results;
-    if (counting && !off) {
+    if (counting && !off && !cutFrame) {
       try {
         final out = await _yolo!.predict(f.jpeg, confidenceThreshold: 0.35);
         results = [for (final d in out['detections'] as List) YOLOResult.fromMap(d as Map)];
@@ -466,6 +537,7 @@ class _LivePageState extends State<LivePage> {
     final yolo = _yolo;
     _yolo = null;
     clip = null;
+    _sounds = null;
     playing = false;
     frame?.dispose();
     frame = null;
@@ -485,6 +557,8 @@ class _LivePageState extends State<LivePage> {
     calibrating = court.calibrating;
     badCorners = false;
     await VideoFrames.close();
+    // After the first await: dispose() reaches here unmounted, and has no context to use.
+    if (mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar(); // its UNDO would mix timelines
     await yolo?.dispose();
     if (mounted) setState(() {});
   }
@@ -530,6 +604,7 @@ class _LivePageState extends State<LivePage> {
   /// Reads one frame of people. [at] is the frame's own time (video playback);
   /// the live camera leaves it out and gets the wall clock.
   void onResult(List<YOLOResult> results, [DateTime? at]) {
+    if (at == null && clip != null) return; // a camera result that outlived the switch
     final now = at ?? DateTime.now();
     final h = toCourt;
     YOLOResult? bestFar, bestNear;
@@ -571,12 +646,20 @@ class _LivePageState extends State<LivePage> {
             : p.swing.update([for (final k in kp) Offset(k.x, k.y)], conf, now, threshold);
         if (s != null && p.pos != null) swings.add((p, s));
       }
-      swings.sort((a, b) => a.$2.time.compareTo(b.$2.time));
-      for (final (p, s) in swings) {
-        final hit = match.addHit(p.side, s.time, p.pos!, s.contact, s.swing);
-        // On a clip the tag flashes HIT for half a second of video time; live is unchanged.
-        if (hit != null && clip != null) {
-          flashUntil[p.side] = now.add(const Duration(milliseconds: 500));
+      final hitters = <Side>[];
+      if (_sounds case final sounds?) {
+        // A clip with sound: the swings only say who hit at each racket sound.
+        hitters.addAll(sounds.hear(now, far, near, match, threshold));
+      } else {
+        swings.sort((a, b) => a.$2.time.compareTo(b.$2.time));
+        for (final (p, s) in swings) {
+          if (match.addHit(p.side, s.time, p.pos!, s.contact, s.swing) != null) hitters.add(p.side);
+        }
+      }
+      // On a clip the tag flashes HIT for half a second of video time; live is unchanged.
+      if (clip != null) {
+        for (final side in hitters) {
+          flashUntil[side] = now.add(const Duration(milliseconds: 500));
         }
       }
       match.strongSwing = threshold * 2;
@@ -684,12 +767,34 @@ class _LivePageState extends State<LivePage> {
   }
 
   Widget topBar() {
+    // A clip's way back, once its court is set; a model error must not hide it.
+    final close = clip == null
+        ? null
+        : Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: Tooltip(
+              message: 'Back to the camera',
+              child: OutlinedButton(
+                onPressed: closeVideo,
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: ink.withValues(alpha: 0.85),
+                  padding: EdgeInsets.zero,
+                ),
+                child: const Icon(Icons.close),
+              ),
+            ),
+          );
     if (error case final e?) {
-      return Container(
+      final box = Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(color: farColour, borderRadius: BorderRadius.circular(6)),
         // 19 sp bold is large text, so card white on red passes 3:1; smaller text would need 4.5:1.
         child: Text('The pose model did not load: $e', style: body(19, paper, FontWeight.w700)),
+      );
+      if (close == null) return box;
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [Expanded(child: box), close],
       );
     }
     // The corner steps sit on the board, so nothing covers the court's far corners.
@@ -717,8 +822,13 @@ class _LivePageState extends State<LivePage> {
                 : [
                     Text('VIDEO', style: caps(12)),
                     // A clip plays as fast as the phone analyses it, so the rate is an estimate.
+                    // No number until two frames have been timed.
                     Text(
-                      playing ? '~${playRate.toStringAsFixed(1)}× speed' : 'Paused',
+                      !playing
+                          ? 'Paused'
+                          : playRate > 0
+                          ? '~${playRate.toStringAsFixed(1)}× speed'
+                          : 'Playing',
                       style: body(12, steel),
                     ),
                   ],
@@ -731,11 +841,13 @@ class _LivePageState extends State<LivePage> {
           icon: const Icon(Icons.tune, size: 18),
           label: Text('HIT AT ${threshold.round()}'),
         ),
+        ?close,
       ],
     );
   }
 
-  // A clip's own controls, on the corner-step card and then the last-shot card.
+  // A clip's own controls: both on the corner-step card, then play/pause on the
+  // last-shot card and ✕ in the top bar.
   Widget playButton() => IconButton.filled(
     onPressed: togglePlay,
     style: IconButton.styleFrom(backgroundColor: ink, foregroundColor: paper),
@@ -1084,8 +1196,9 @@ class _LivePageState extends State<LivePage> {
     final last = match.hits.where((h) => h.type != null).lastOrNull ?? match.hits.lastOrNull;
     final speed = last?.speedKmh;
     final c = clip;
-    // A clip's time goes under the side tag: beside the speed the row would run ~40 dp
-    // past a 375 dp phone at 1.3x. It flips with the card, but both cards show the same m:ss.
+    // A clip's time goes under the side tag: beside the speed the row would run past a
+    // 375 dp phone at 1.3x even with no shot name. It flips with the card, but both cards
+    // show the same m:ss.
     final time = c == null
         ? null
         : Text(
@@ -1103,10 +1216,11 @@ class _LivePageState extends State<LivePage> {
               ],
             )
           : Padding(
-              // On a clip, play/pause and ✕ take the 48 dp at each end.
+              // On a clip, play/pause takes the 48 dp on the left. A narrow right edge
+              // keeps the shot name 40 dp at 375 dp and 1.3x beside the speed.
               padding: c == null
                   ? const EdgeInsets.fromLTRB(10, 8, 14, 4)
-                  : const EdgeInsets.fromLTRB(52, 4, 48, 3),
+                  : const EdgeInsets.fromLTRB(52, 4, 8, 3),
               child: Row(
                 children: [
                   Column(
@@ -1152,7 +1266,6 @@ class _LivePageState extends State<LivePage> {
       children: [
         card,
         Align(alignment: Alignment.centerLeft, child: playButton()),
-        Align(alignment: Alignment.centerRight, child: closeButton()),
         Positioned(
           left: 0,
           right: 0,

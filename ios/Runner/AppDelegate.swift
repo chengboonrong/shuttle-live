@@ -35,7 +35,11 @@ import UIKit
           do {
             let reader = try VideoFrameReader(url: URL(fileURLWithPath: path))
             self?.reader = reader
-            reply = ["durationUs": reader.durationUs, "width": reader.width, "height": reader.height]
+            var clip: [String: Any] = ["durationUs": reader.durationUs, "width": reader.width, "height": reader.height]
+            if let sound = reader.sound {
+              clip["sound"] = FlutterStandardTypedData(float32: sound.withUnsafeBufferPointer { Data(buffer: $0) })
+            }
+            reply = clip
           } catch {
             reply = FlutterError(code: "unreadable", message: "\(error)", details: nil)
           }

@@ -1,10 +1,18 @@
 import 'package:flutter/services.dart';
 
+import 'analysis.dart';
+
 /// A saved clip, its size after rotation.
 class VideoClip {
-  const VideoClip({required this.duration, required this.width, required this.height});
+  const VideoClip({
+    required this.duration,
+    required this.width,
+    required this.height,
+    this.sounds,
+  });
   final Duration duration;
   final int width, height;
+  final List<Duration>? sounds; // racket sounds; null when the clip has none
   double get aspect => width / height;
 }
 
@@ -21,12 +29,17 @@ abstract final class VideoFrames {
   static const channel = MethodChannel('shuttle_live/video_frames');
 
   /// Throws a [PlatformException] (`unreadable`) if [path] isn't a readable video.
+  /// The reply's `sound` (Float32, one dB value per [soundStep]) is missing when the clip has none.
   static Future<VideoClip> open(String path) async {
     final m = (await channel.invokeMapMethod<String, Object?>('open', {'path': path}))!;
+    final sound = m['sound'] as List<double>?;
+    final heard = sound == null ? null : racketSounds(sound);
     return VideoClip(
       duration: Duration(microseconds: m['durationUs']! as int),
       width: m['width']! as int,
       height: m['height']! as int,
+      // Not one racket sound (a muted or silent track): the swings time the hits, as with no track.
+      sounds: heard == null || heard.isEmpty ? null : heard,
     );
   }
 
@@ -53,8 +66,11 @@ double thumbDiff(Uint8List a, Uint8List b) {
   return sum / a.length;
 }
 
-// ponytail: tuned on the owner's first clip (Task 7); broadcast cameras pan a little.
-const cutThreshold = 40.0;
+// ponytail: tuned on two clips (Paris 2024 doubles highlights, Lin Dan v Lee Chong Wei
+// singles; 91 shots): the main camera drifts up to 9.3 from the frame the corners were
+// tapped on, the nearest cut-away or side replay is 24.7; this sits near the midpoint.
+// Retune if another broadcast's numbers land between the two.
+const cutThreshold = 16.7;
 
 /// Tells the court view from a TV cut by comparing each frame's thumbnail with
 /// the one taken when the court was set. Flips to off-court after 2 frames in a

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -13,6 +14,19 @@ import 'package:ultralytics_yolo/ultralytics_yolo.dart';
 import 'fonts.dart';
 
 const demoCorners = [Offset(0.3, 0.22), Offset(0.7, 0.22), Offset(0.96, 0.94), Offset(0.04, 0.94)];
+
+/// One player's keypoints: shoulders y=100, hips y=150 (torso 50); the right wrist is the racket hand.
+List<Offset> pose(double wristY) => [
+  for (var i = 0; i < 17; i++)
+    switch (i) {
+      5 => const Offset(90, 100),
+      6 => const Offset(110, 100),
+      10 => Offset(110, wristY),
+      11 => const Offset(92, 150),
+      12 => const Offset(108, 150),
+      _ => const Offset(100, 120),
+    },
+];
 
 /// The court lines, rings and P1/P2 tags drawn over the picture.
 final overlay = find.byWidgetPredicate(
@@ -57,10 +71,12 @@ Future<void> playToEnd(WidgetTester tester, dynamic s) async {
 /// thumbValue), 33333 µs apart. Frame i's thumbnail is filled with thumbValues[i]
 /// (100 by default).
 /// The pose model is mocked too: every predict finds [people] (0–1 boxes), or nobody.
+/// [sound] is the open reply's envelope, as the native readers send it; null leaves the key out.
 Future<dynamic> openMockClip(
   WidgetTester tester, {
   List<int>? thumbValues,
   List<Rect> people = const [],
+  Float32List? sound,
   void Function(dynamic s)? beforeOpen,
 }) async {
   await tester.pumpWidget(MaterialApp(theme: theme, home: const LivePage()));
@@ -78,7 +94,7 @@ Future<dynamic> openMockClip(
   messenger.setMockMethodCallHandler(VideoFrames.channel, (call) async {
     switch (call.method) {
       case 'open':
-        return {'durationUs': 2000000, 'width': 1920, 'height': 1080};
+        return {'durationUs': 2000000, 'width': 1920, 'height': 1080, 'sound': ?sound};
       case 'next':
         if (i == (thumbValues?.length ?? 5)) return null;
         final thumb = Uint8List(576)..fillRange(0, 576, thumbValues?.elementAtOrNull(i) ?? 100);
@@ -169,6 +185,87 @@ void main() {
     // First position after the cut, 2 m away: no distance added.
     p.update(const Offset(3, 10), t0.add(const Duration(seconds: 5)));
     expect(p.distance, distance);
+  });
+
+  test('racket sounds become hits: who from the swing, when from the sound', () {
+    final far = Player(Side.far, farColour), near = Player(Side.near, nearColour);
+    final match = Match();
+    final base = DateTime(2000);
+    final sounds = SoundHits(const [Duration(milliseconds: 1000), Duration(milliseconds: 1800)], base);
+    final heard = <Side>[];
+    // 40 ms frames to 2.2 s. Far swings 200 ms after the first sound, near 200 ms before the
+    // second: the wrist jumps 30 px up, 15 torso lengths/s. The hits still take the sounds' times,
+    // and the first one is only heard once its swing has been seen.
+    for (var i = 0; i <= 55; i++) {
+      final now = base.add(Duration(milliseconds: 40 * i));
+      for (final (p, at, swingFrame) in [(far, const Offset(3, 2), 30), (near, const Offset(3, 11), 40)]) {
+        p.update(at, now);
+        p.swing.update(pose(i < swingFrame ? 100 : 70), List.filled(17, 0.9), now, 8);
+      }
+      heard.addAll(sounds.hear(now, far, near, match, 8));
+    }
+    expect(heard, [Side.far, Side.near]);
+    expect(match.hits.map((h) => (h.side, h.time)), [
+      (Side.far, base.add(const Duration(milliseconds: 1000))),
+      (Side.near, base.add(const Duration(milliseconds: 1800))),
+    ]);
+    expect(match.hits.first.contact, Contact.overhead);
+    expect(match.hits.first.speedKmh, closeTo(126, 1)); // 9 m in 0.8 s
+  });
+
+  testWidgets('a clip with sound has its racket sounds', (tester) async {
+    final db = Float32List(400)..fillRange(0, 400, -60);
+    final s = await openMockClip(tester, sound: db..[200] = -30);
+    expect(s.clip.sounds, [soundStep * 200]);
+  });
+
+  testWidgets('a clip without sound has none', (tester) async {
+    final s = await openMockClip(tester);
+    expect(s.clip.sounds, isNull);
+  });
+
+  testWidgets('a silent sound track counts as no sound', (tester) async {
+    final s = await openMockClip(tester, sound: Float32List(400)..fillRange(0, 400, -100));
+    expect(s.clip.sounds, isNull);
+  });
+
+  testWidgets('a clip with sound counts no swing away from its sounds; the camera counts it', (
+    tester,
+  ) async {
+    // The clip's one racket sound is at 1.5 s; the whip is over by 0.3 s.
+    final s = await openMockClip(tester, sound: Float32List(400)..fillRange(0, 400, -60)..[300] = -30);
+    void court() {
+      s.recalibrate();
+      s.taps.addAll(demoCorners);
+      s.toCourt = Homography.fit(demoCorners, courtCorners);
+      s.toFrame = Homography.fit(courtCorners, demoCorners);
+      s.calibrating = false;
+    }
+
+    // A near player whose right wrist whips up 40 px a frame, ~24 torso lengths/s.
+    void whip() {
+      for (final (i, y) in const <double>[100, 100, 100, 60, 20, 40, 40, 40, 40].indexed) {
+        s.onResult([
+          YOLOResult(
+            classIndex: 0,
+            className: 'person',
+            confidence: 0.9,
+            boundingBox: Rect.zero,
+            normalizedBox: const Rect.fromLTRB(0.47, 0.6, 0.53, 0.8),
+            keypoints: [for (final k in pose(y)) Keypoint(k.dx, k.dy)],
+            keypointConfidences: List.filled(17, 0.9),
+          ),
+        ], DateTime(2000).add(Duration(milliseconds: 33 * i)));
+      }
+    }
+
+    court();
+    whip();
+    expect(s.match.hits, isEmpty);
+    await s.closeVideo();
+    court();
+    whip();
+    expect(s.match.hits, hasLength(1));
   });
 
   testWidgets('onResult runs on the time it is given', (tester) async {
@@ -271,7 +368,63 @@ void main() {
     expect(natural, greaterThan(150)); // 22 sp at 1.3x
     expect(tester.getRect(shot).width, closeTo(natural, 1));
     expect(find.textContaining(' / '), findsOneWidget); // the time
-    expect(find.text('VIDEO'), findsOneWidget); // the top bar was measured too
+    // The shot name keeps room to be read beside the speed.
+    final name = find.descendant(of: find.byType(FlipCard), matching: find.text('SMASH'));
+    expect(tester.getRect(name).width, greaterThanOrEqualTo(40));
+    // ✕ sits in the top bar, right of HIT AT, at a full 48 dp and on screen.
+    final close = tester.getRect(find.byTooltip('Back to the camera'));
+    final hitAt = tester.getRect(
+      find.ancestor(of: find.textContaining('HIT AT'), matching: find.byType(OutlinedButton)),
+    );
+    expect(close.left, greaterThanOrEqualTo(hitAt.right));
+    expect(close.top, lessThan(hitAt.bottom));
+    expect(close.right, lessThanOrEqualTo(375));
+    expect(close.width >= 48 && close.height >= 48, isTrue);
+    // The top bar at its widest chip, a two-digit rate.
+    s.playRate = 88.8;
+    s.playing = true;
+    tester.element(find.byType(LivePage)).markNeedsBuild();
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.text('~88.8× speed'), findsOneWidget);
+  });
+
+  testWidgets('a model error keeps the way back to the camera', (tester) async {
+    final s = await openMockClip(tester);
+    await setCourt(tester); // past the corner steps, whose card has its own ✕
+    s.error = 'no model';
+    tester.element(find.byType(LivePage)).markNeedsBuild();
+    await tester.pump();
+    expect(find.textContaining('did not load'), findsOneWidget);
+    expect(find.byTooltip('Back to the camera'), findsOneWidget);
+  });
+
+  testWidgets('the speed chip waits for a measured rate', (tester) async {
+    phone(tester, const Size(393, 852));
+    final s = await openMockClip(tester, thumbValues: List.filled(40, 100));
+    Future<void> playUntil(bool Function() done) async {
+      for (var i = 0; !done() && i < 30; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+        await tester.pump();
+      }
+      expect(done(), isTrue);
+    }
+
+    // A setup play, to find the court, measures a rate of its own.
+    s.togglePlay();
+    await playUntil(() => s.playRate > 0);
+    s.togglePlay();
+    await tester.pump();
+    await setCourt(tester); // the fourth corner starts counting
+    await tester.pump();
+    expect(s.playing, isTrue);
+    expect(s.playRate, 0);
+    expect(find.text('Playing'), findsOneWidget);
+    await playUntil(() => s.playRate > 0);
+    expect(find.textContaining('× speed'), findsOneWidget);
+    // A new clip starts from no rate too.
+    await tester.runAsync(() => s.openVideo('y.mp4') as Future<void>);
+    expect(s.playRate, 0);
   });
 
   testWidgets('a cut hides the tags and shows the scrim', (tester) async {
@@ -286,8 +439,10 @@ void main() {
     await playToEnd(tester, s);
     expect(s.offCourt, isTrue);
     expect(find.text('NOT THE COURT'), findsOneWidget);
-    // P1 keeps the place the cut found them in, but neither ring nor tag is drawn.
+    // P1 keeps the place before the cut, but neither ring nor tag is drawn. The cut's
+    // first frame (the 2-in rule needs a second) was not counted: one point, not two.
     expect(s.far.pos, isNotNull);
+    expect(s.far.trail, hasLength(1));
     expect(tester.renderObject(overlay), isNot(paintsIn(#drawRect, farColour)));
   });
 
@@ -303,6 +458,8 @@ void main() {
     final shown = DateTime(2000).add(s.frameTime as Duration);
     s.flashUntil[Side.near] = shown.add(const Duration(milliseconds: 1));
     expect(tester.renderObject(overlay), fill);
+    // ...under a paper stroke, so no circle is drawn in P2's own colour.
+    expect(tester.renderObject(overlay), isNot(paintsIn(#drawCircle, nearColour)));
     s.flashUntil[Side.near] = shown;
     expect(tester.renderObject(overlay), isNot(fill));
   });
@@ -319,8 +476,91 @@ void main() {
     await playToEnd(tester, s);
     expect(s.offCourt, isFalse);
     expect(find.text('NOT THE COURT'), findsNothing);
-    // Seen on frames 1, 2 and 6; the cut forgot the first two.
+    // Seen on frames 1 and 6 (frame 2 is the cut's first, not counted); the cut forgot frame 1.
     expect(s.far.trail, hasLength(1));
+  });
+
+  testWidgets('a clip with no frame says so', (tester) async {
+    await openMockClip(tester, thumbValues: []);
+    await tester.pump();
+    expect(find.text("That video can't be read"), findsOneWidget);
+  });
+
+  testWidgets('the app going inactive pauses the clip', (tester) async {
+    final s = await openMockClip(tester, thumbValues: List.filled(40, 100));
+    await setCourt(tester); // the fourth corner starts counting
+    expect(s.playing, isTrue);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    expect(s.playing, isFalse);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    // A model error from the background is gone once the clip plays again.
+    s.error = 'no model';
+    s.togglePlay();
+    expect(s.error, isNull);
+    s.togglePlay();
+  });
+
+  testWidgets('the end of the clip names its last shot', (tester) async {
+    final s = await openMockClip(tester);
+    await setCourt(tester);
+    final hit = Hit(Side.near, DateTime(2000), const Offset(3, 10), Contact.overhead, 12, serve: false);
+    s.match.hits.add(hit);
+    await playToEnd(tester, s);
+    expect(hit.type, isNotNull); // live names it 3 s later; the clip has no later
+  });
+
+  testWidgets('a camera result that outlives the switch is dropped', (tester) async {
+    final s = await openMockClip(tester);
+    s.onResult([
+      YOLOResult(
+        classIndex: 0,
+        className: 'person',
+        confidence: 0.9,
+        boundingBox: Rect.zero,
+        normalizedBox: const Rect.fromLTRB(0.4, 0.6, 0.5, 0.8),
+      ),
+    ]);
+    expect(s.feet, isEmpty);
+  });
+
+  testWidgets('opening or closing a clip drops a pending UNDO', (tester) async {
+    final s = await openMockClip(tester);
+    final messenger = ScaffoldMessenger.of(tester.element(find.byType(LivePage)));
+    Future<void> pendingUndo() async {
+      messenger.showSnackBar(const SnackBar(content: Text('stats reset')));
+      await tester.pump();
+      expect(find.text('stats reset'), findsOneWidget);
+    }
+
+    await pendingUndo();
+    await tester.runAsync(() => s.openVideo('y.mp4') as Future<void>);
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('stats reset'), findsNothing);
+    await pendingUndo();
+    await s.closeVideo();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('stats reset'), findsNothing);
+  });
+
+  testWidgets('a pick that fails says so', (tester) async {
+    await tester.pumpWidget(MaterialApp(theme: theme, home: const LivePage()));
+    final s = tester.state(find.byType(LivePage)) as dynamic;
+    const picker = MethodChannel('plugins.flutter.io/image_picker');
+    var code = 'already_active';
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      picker,
+      (_) async => throw PlatformException(code: code),
+    );
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(picker, null));
+    // A second tap while the picker is up stays quiet: the first pick is still coming.
+    await tester.runAsync(() => s.pickVideo() as Future<void>);
+    await tester.pump();
+    expect(find.text("That video can't be read"), findsNothing);
+    code = 'invalid_image';
+    await tester.runAsync(() => s.pickVideo() as Future<void>);
+    await tester.pump();
+    expect(find.text("That video can't be read"), findsOneWidget);
   });
 
   testWidgets('a play tap waits while another clip opens', (tester) async {

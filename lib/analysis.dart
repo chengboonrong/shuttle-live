@@ -129,8 +129,65 @@ class Match {
   }
 }
 
+const soundStep = Duration(milliseconds: 5);
+// ponytail: tuned on one TV singles clip (12 dB missed 4 of 20 hits); retune if another broadcast misses hits.
+const soundRise = 10.0; // dB over the 0.3 s around it
+/// A hit's swing is this close to its racket sound.
+const soundWindow = Duration(milliseconds: 300);
+
+/// Racket-hit times from a clip's sound: [db] is its 2–8 kHz energy in dB, one value per [soundStep].
+List<Duration> racketSounds(List<double> db) {
+  final sums = List<double>.filled(db.length + 1, 0);
+  for (var i = 0; i < db.length; i++) {
+    sums[i + 1] = sums[i] + db[i];
+  }
+  final rise = <double>[];
+  for (var i = 0; i < db.length; i++) {
+    // The mean of db[i − 30 .. i + 30], clipped at the ends.
+    final lo = math.max(0, i - 30), hi = math.min(db.length, i + 31);
+    rise.add(db[i] - (sums[hi] - sums[lo]) / (hi - lo));
+  }
+  final kept = <int>[];
+  for (var i = 0; i < rise.length; i++) {
+    if (rise[i] <= soundRise ||
+        (i > 0 && rise[i] < rise[i - 1]) ||
+        (i + 1 < rise.length && rise[i] < rise[i + 1])) {
+      continue;
+    }
+    // More than 0.3 s after the last kept sound is a new one; nearer, the louder rise wins.
+    if (kept.isEmpty || i - kept.last > 60) {
+      kept.add(i);
+    } else if (rise[i] > rise[kept.last]) {
+      kept.last = i;
+    }
+  }
+  return [for (final i in kept) soundStep * i];
+}
+
+/// Who hit at a racket sound, from each side's fastest wrist around it. [last] is the side of the
+/// rally's last hit (null for a rally's first). Null when neither swing reached [threshold].
+Side? soundHitter(double far, double near, Side? last, double threshold) {
+  if (math.max(far, near) < threshold) return null;
+  if (last == null) return near > far ? Side.near : Side.far;
+  final (lastSwing, otherSwing) = last == Side.far ? (far, near) : (near, far);
+  // Last's side swung twice as fast as the other: a missed or false sound put the turn order
+  // out, and the pose re-syncs it.
+  // ponytail: 2× picked on one TV singles clip (frames at 5.4 s and 6.2 s); retune on others.
+  return lastSwing >= 2 * otherSwing ? last : (last == Side.far ? Side.near : Side.far);
+}
+
 // COCO-17 keypoint indexes.
 const _lShoulder = 5, _rShoulder = 6, _lWrist = 9, _rWrist = 10, _lHip = 11, _rHip = 12;
+
+/// Where the racket met the shuttle, from the wrist against the shoulders over the torso length.
+Contact _contact(Offset shoulders, Offset wrist, double torso) {
+  final up = (shoulders.dy - wrist.dy) / torso; // wrist above shoulders
+  return up > 0.3
+      ? Contact.overhead
+      : up < -0.6
+      ? Contact.low
+      : Contact.mid;
+}
 
 /// Finds racket swings from one player's wrists, measured against their own
 /// hips and torso length so running about does not count.
@@ -140,6 +197,16 @@ class SwingDetector {
   double _peak = 0;
   Contact _peakContact = Contact.mid;
   double speed = 0; // latest wrist speed, torso lengths per second
+  final _frames = <(DateTime, double, Contact)>[]; // the last second: time, wrist speed, contact
+
+  /// The fastest frame within [soundWindow] of [t]: swing 0 and mid contact when there is none.
+  ({double swing, Contact contact}) peakNear(DateTime t) {
+    var best = (swing: 0.0, contact: Contact.mid);
+    for (final (time, v, c) in _frames) {
+      if (time.difference(t).abs() <= soundWindow && v > best.swing) best = (swing: v, contact: c);
+    }
+    return best;
+  }
 
   /// Feeds one frame of keypoints (any units) and returns a swing once it ends.
   ({DateTime time, Contact contact, double swing})? update(
@@ -181,18 +248,17 @@ class SwingDetector {
       }
     }
     speed = best;
+    final contact = bestWrist == null ? Contact.mid : _contact(shoulders, bestWrist, torso);
+    _frames
+      ..add((now, best, contact))
+      ..removeWhere((f) => now.difference(f.$1) > const Duration(seconds: 1));
 
     final recentHit = _lastHit != null && now.difference(_lastHit!).inMilliseconds < 400;
     if (best > threshold && (_peakTime != null || !recentHit)) {
       if (best > _peak) {
         _peak = best;
         _peakTime = now;
-        final up = (shoulders.dy - bestWrist!.dy) / torso; // wrist above shoulders
-        _peakContact = up > 0.3
-            ? Contact.overhead
-            : up < -0.6
-            ? Contact.low
-            : Contact.mid;
+        _peakContact = contact;
       }
       return null;
     }
@@ -211,6 +277,7 @@ class SwingDetector {
 
   void reset() {
     _prev.clear();
+    _frames.clear();
     _prevTime = _peakTime = _lastHit = null;
     _peak = speed = 0;
   }

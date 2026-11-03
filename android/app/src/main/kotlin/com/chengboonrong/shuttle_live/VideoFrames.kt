@@ -3,6 +3,10 @@ package com.chengboonrong.shuttle_live
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Matrix
+import android.media.AudioFormat
+import android.media.MediaCodec
+import android.media.MediaExtractor
+import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.os.Handler
@@ -11,8 +15,14 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
+import java.nio.ByteOrder
 import java.util.concurrent.Executors
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.log10
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
+import kotlin.math.sin
 
 /** A frame under this long after the last one returned is skipped, so a 60 fps clip yields every other frame. */
 private const val MIN_GAP_US = 32333L
@@ -103,7 +113,110 @@ class VideoFrames(messenger: BinaryMessenger) : MethodChannel.MethodCallHandler 
         retriever = r
         cursor = 0
         lastUs = null
-        return mapOf("durationUs" to durationUs, "width" to width, "height" to height)
+        val clip = mutableMapOf<String, Any>("durationUs" to durationUs, "width" to width, "height" to height)
+        sound(path)?.let { clip["sound"] = it }
+        return clip
+    }
+
+    /**
+     * The clip's 2–8 kHz sound energy in dB, one value per 5 ms from 0 (see [SoundEnvelope]): the first
+     * audio track decoded to PCM, its channels averaged, at the source rate. Never throws: no audio
+     * track, or audio that won't decode, is null.
+     */
+    private fun sound(path: String): FloatArray? {
+        val extractor = MediaExtractor()
+        var codec: MediaCodec? = null
+        try {
+            extractor.setDataSource(path)
+            val track = (0 until extractor.trackCount).firstOrNull {
+                extractor.getTrackFormat(it).getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true
+            } ?: return null
+            extractor.selectTrack(track)
+            val format = extractor.getTrackFormat(track)
+            val c = MediaCodec.createDecoderByType(format.getString(MediaFormat.KEY_MIME)!!)
+            codec = c
+            c.configure(format, null, null, 0)
+            c.start()
+            val info = MediaCodec.BufferInfo()
+            var envelope: SoundEnvelope? = null
+            var rate = 0
+            var channels = 1
+            var float = false
+            var inputDone = false
+            var idle = 0
+            var pcm = FloatArray(0)
+            while (true) {
+                if (!inputDone) {
+                    val i = c.dequeueInputBuffer(10_000)
+                    if (i >= 0) {
+                        idle = 0
+                        val n = extractor.readSampleData(c.getInputBuffer(i)!!, 0)
+                        if (n < 0) {
+                            c.queueInputBuffer(i, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                            inputDone = true
+                        } else {
+                            c.queueInputBuffer(i, 0, n, extractor.sampleTime, 0)
+                            extractor.advance()
+                        }
+                    }
+                }
+                val o = c.dequeueOutputBuffer(info, 10_000)
+                // The layout before the first samples, and again if it changes mid-stream (an HE-AAC switch,
+                // 5.1 to stereo). A new rate once the windows have started would move them off clip time.
+                if (o == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED || (o >= 0 && envelope == null)) {
+                    val out = c.outputFormat
+                    val r = out.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+                    require(envelope == null || r == rate) { "the sample rate changed mid-stream" }
+                    val encoding = if (out.containsKey(MediaFormat.KEY_PCM_ENCODING)) {
+                        out.getInteger(MediaFormat.KEY_PCM_ENCODING)
+                    } else {
+                        AudioFormat.ENCODING_PCM_16BIT
+                    }
+                    rate = r
+                    channels = out.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+                    float = encoding == AudioFormat.ENCODING_PCM_FLOAT
+                    require(rate > 16000) { "the 8 kHz low-pass needs a rate over 16 kHz" }
+                    require(channels > 0 && (float || encoding == AudioFormat.ENCODING_PCM_16BIT)) {
+                        "only 16-bit or float PCM is read"
+                    }
+                }
+                if (o < 0) {
+                    // A decoder that takes no input and gives no output for ~1 s would hang open: give up.
+                    if (o == MediaCodec.INFO_TRY_AGAIN_LATER && ++idle > 100) return null
+                    continue
+                }
+                idle = 0
+                if (envelope == null) {
+                    envelope = SoundEnvelope(rate.toDouble())
+                    // Sound that starts after 0 (an edit list) is silence until then, so the windows stay on clip time.
+                    repeat(maxOf(0L, (info.presentationTimeUs * rate / 1e6).roundToLong()).toInt()) { envelope.add(0f) }
+                }
+                val buf = c.getOutputBuffer(o)!!.order(ByteOrder.nativeOrder())
+                buf.position(info.offset).limit(info.offset + info.size)
+                val count = if (float) info.size / 4 else info.size / 2
+                if (pcm.size < count) pcm = FloatArray(count)
+                if (float) {
+                    buf.asFloatBuffer().get(pcm, 0, count)
+                } else {
+                    val shorts = buf.asShortBuffer()
+                    for (k in 0 until count) pcm[k] = shorts.get(k) / 32768f
+                }
+                for (k in 0 until count / channels * channels step channels) {
+                    var x = 0f
+                    for (ch in 0 until channels) x += pcm[k + ch]
+                    envelope.add(x / channels)
+                }
+                c.releaseOutputBuffer(o, false)
+                if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) break
+            }
+            return envelope.db.takeIf { it.isNotEmpty() }?.toFloatArray()
+        } catch (t: Throwable) {
+            return null
+        } finally {
+            runCatching { codec?.stop() }
+            runCatching { codec?.release() }
+            runCatching { extractor.release() }
+        }
     }
 
     /** Never throws, so a failing release can't cost a reply. */
@@ -127,7 +240,10 @@ class VideoFrames(messenger: BinaryMessenger) : MethodChannel.MethodCallHandler 
         var misses = 0
         while (true) {
             val i = cursor++
-            // ponytail: even spacing; variable-frame-rate clips drift a little
+            // ponytail: even spacing; variable-frame-rate clips drift a little. Sound timing relies on it: racket
+            // sounds are stamped by real sample time, so this assumes a constant frame rate and audio and video
+            // tracks of equal length. Upgrade: in open, read the video track's sample times with a MediaExtractor
+            // (no decoding), sort them, and use times[i].
             val timeUs = if (frameCount > 0) i * durationUs / frameCount else i * STEP_US
             if (timeUs >= durationUs) return null
             val last = lastUs
@@ -191,5 +307,67 @@ class VideoFrames(messenger: BinaryMessenger) : MethodChannel.MethodCallHandler 
             }
         }
         return gray
+    }
+}
+
+/** A 2nd-order RBJ cookbook filter, Q = 0.7071, at [f0] Hz. */
+private class Biquad(highPass: Boolean, f0: Double, rate: Double) {
+    private val b0: Float
+    private val b1: Float
+    private val b2: Float
+    private val a1: Float
+    private val a2: Float
+    private var x1 = 0f
+    private var x2 = 0f
+    private var y1 = 0f
+    private var y2 = 0f
+
+    init {
+        val w = 2 * PI * f0 / rate
+        val a = sin(w) / (2 * 0.7071)
+        val c = cos(w)
+        val a0 = 1 + a
+        val k = if (highPass) (1 + c) / 2 else (1 - c) / 2
+        b0 = (k / a0).toFloat()
+        b1 = ((if (highPass) -2 * k else 2 * k) / a0).toFloat()
+        b2 = b0
+        a1 = (-2 * c / a0).toFloat()
+        a2 = ((1 - a) / a0).toFloat()
+    }
+
+    fun run(x: Float): Float {
+        val y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+        x2 = x1
+        x1 = x
+        y2 = y1
+        y1 = y
+        return y
+    }
+}
+
+/**
+ * Sound energy in dB after a 2 kHz high-pass and an 8 kHz low-pass, one value per 5 ms window, as on
+ * iOS: window k is samples [round(k·rate/200), round((k+1)·rate/200)), so windows average exactly
+ * 5 ms at any rate. A last, partial window is left out.
+ */
+private class SoundEnvelope(private val rate: Double) {
+    private val hp = Biquad(true, 2000.0, rate)
+    private val lp = Biquad(false, 8000.0, rate)
+    private var sum = 0f
+    private var n = 0
+    private var seen = 0L
+    private var end = (rate / 200).roundToLong()
+    val db = ArrayList<Float>()
+
+    /** Feeds the next mono sample. */
+    fun add(x: Float) {
+        val y = lp.run(hp.run(x))
+        sum += y * y
+        n++
+        if (++seen != end) return
+        db.add(10 * log10(sum / n + 1e-10f))
+        sum = 0f
+        n = 0
+        end = ((db.size + 1) * rate / 200).roundToLong()
     }
 }

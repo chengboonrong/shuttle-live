@@ -16,6 +16,8 @@ final class VideoFrameReader {
   /// Size after the track's rotation is applied.
   let width: Int
   let height: Int
+  /// The clip's 2–8 kHz sound energy in dB, one value per 5 ms from 0; nil when it has no readable sound.
+  let sound: [Float]?
 
   private static let minGapUs: Int64 = 32333
   private static let longestSide: CGFloat = 1280
@@ -54,9 +56,49 @@ final class VideoFrameReader {
     guard reader.startReading() else {
       throw reader.error ?? VideoFrameReaderError.cannotStart
     }
+    sound = Self.soundEnvelope(asset)
   }
 
   deinit { reader.cancelReading() }
+
+  /// Reads the whole audio track with a second reader, which mixes it to mono 48 kHz float.
+  /// Never throws: no audio track, or audio that won't decode, is nil.
+  private static func soundEnvelope(_ asset: AVAsset) -> [Float]? {
+    guard let track = asset.tracks(withMediaType: .audio).first,
+      let reader = try? AVAssetReader(asset: asset)
+    else { return nil }
+    let rate = 48000.0
+    let output = AVAssetReaderTrackOutput(
+      track: track,
+      outputSettings: [
+        AVFormatIDKey: kAudioFormatLinearPCM, AVLinearPCMBitDepthKey: 32, AVLinearPCMIsFloatKey: true,
+        AVLinearPCMIsNonInterleaved: false, AVLinearPCMIsBigEndianKey: false,
+        AVNumberOfChannelsKey: 1, AVSampleRateKey: rate,
+      ])
+    guard reader.canAdd(output) else { return nil }
+    reader.add(output)
+    guard reader.startReading() else { return nil }
+    var envelope = SoundEnvelope(rate: rate)
+    var first = true
+    while let sample = output.copyNextSampleBuffer() {
+      // Sound that starts after 0 (an edit list) is silence until then, so the windows stay on clip time.
+      let start = CMSampleBufferGetPresentationTimeStamp(sample)
+      if first, start.isNumeric {
+        for _ in 0..<max(0, Int((start.seconds * rate).rounded())) { envelope.add(0) }
+      }
+      first = false
+      guard let block = CMSampleBufferGetDataBuffer(sample) else { continue }
+      var pcm = [Float](repeating: 0, count: CMBlockBufferGetDataLength(block) / 4)
+      if pcm.isEmpty { continue }
+      let copied = pcm.withUnsafeMutableBytes {
+        CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: $0.count, destination: $0.baseAddress!)
+      }
+      guard copied == kCMBlockBufferNoErr else { return nil }
+      for x in pcm { envelope.add(x) }
+    }
+    guard reader.status == .completed, !envelope.db.isEmpty else { return nil }
+    return envelope.db
+  }
 
   /// The next kept frame, or nil at the end of the clip (or if decoding stops).
   func next() -> (jpeg: Data, timeUs: Int64, thumb: Data)? {
@@ -108,5 +150,54 @@ final class VideoFrameReader {
     filter.setValue(sy, forKey: kCIInputScaleKey)
     filter.setValue(size.width / image.extent.width / sy, forKey: kCIInputAspectRatioKey)
     return filter.outputImage!.cropped(to: CGRect(origin: .zero, size: size))
+  }
+}
+
+/// A 2nd-order RBJ cookbook filter, Q = 0.7071, at `f0` Hz.
+private struct Biquad {
+  var b0, b1, b2, a1, a2: Float
+  var x1: Float = 0, x2: Float = 0, y1: Float = 0, y2: Float = 0
+
+  init(highPass: Bool, f0: Double, rate: Double) {
+    let w = 2 * Double.pi * f0 / rate, a = sin(w) / (2 * 0.7071), c = cos(w), a0 = 1 + a
+    let k = highPass ? (1 + c) / 2 : (1 - c) / 2
+    b0 = Float(k / a0); b1 = Float((highPass ? -2 * k : 2 * k) / a0); b2 = b0
+    a1 = Float(-2 * c / a0); a2 = Float((1 - a) / a0)
+  }
+
+  mutating func run(_ x: Float) -> Float {
+    let y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+    x2 = x1; x1 = x; y2 = y1; y1 = y
+    return y
+  }
+}
+
+/// Sound energy in dB after a 2 kHz high-pass and an 8 kHz low-pass, one value per 5 ms window:
+/// window k is samples [round(k·rate/200), round((k+1)·rate/200)), so windows average exactly 5 ms
+/// at any rate. A last, partial window is left out.
+private struct SoundEnvelope {
+  private let rate: Double
+  private var hp, lp: Biquad
+  private var sum: Float = 0, n = 0, seen = 0, end: Int
+  private(set) var db = [Float]()
+
+  init(rate: Double) {
+    self.rate = rate
+    hp = Biquad(highPass: true, f0: 2000, rate: rate)
+    lp = Biquad(highPass: false, f0: 8000, rate: rate)
+    end = Int((rate / 200).rounded())
+  }
+
+  /// Feeds the next mono sample.
+  mutating func add(_ x: Float) {
+    let y = lp.run(hp.run(x))
+    sum += y * y
+    n += 1
+    seen += 1
+    guard seen == end else { return }
+    db.append(10 * log10(sum / Float(n) + 1e-10))
+    sum = 0
+    n = 0
+    end = Int((Double(db.count + 1) * rate / 200).rounded())
   }
 }
