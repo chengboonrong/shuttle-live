@@ -31,7 +31,7 @@ Nothing else does live badminton analysis on a phone: SwingVision covers tennis 
 - Singles only. One camera cannot make line calls or keep score.
 - Shot types are rule-of-thumb labels; shuttle speed is an estimate and needs a returned shot; arcing shots (clears, lifts) read low.
 - A hit-threshold slider tunes swing sensitivity on court; the live swing speeds are shown so it can be tuned.
-- First launch downloads the pose model (needs internet). The Ultralytics model is AGPL: private testing only, not for public release yet.
+- First launch downloads the pose model (needs internet). The Ultralytics plugin and model are AGPL-3.0, so the app's source is public under AGPL-3.0 too.
 
 ## Brand Commitments
 
